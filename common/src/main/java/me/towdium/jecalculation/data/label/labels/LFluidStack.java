@@ -44,7 +44,7 @@ public class LFluidStack extends LStack<Fluid> {
     }
 
     public LFluidStack(FluidStack fs) {
-        this(fs.getAmount(), fs.getFluid(), fs.getTag());
+        this(fs.getAmount(), fs.getFluid(), null);
     }
 
     public LFluidStack(long amount, Fluid fluid) {
@@ -59,7 +59,8 @@ public class LFluidStack extends LStack<Fluid> {
     public LFluidStack(CompoundTag nbt) {
         super(nbt);
         String id = nbt.getString(KEY_FLUID);
-        Optional<Fluid> f = BuiltInRegistries.FLUID.getOptional(new ResourceLocation(id));
+        ResourceLocation location = ResourceLocation.tryParse(id);
+        Optional<Fluid> f = location == null ? Optional.empty() : BuiltInRegistries.FLUID.getOptional(location);
         if (f.isEmpty()) throw new SerializationException("Fluid " + id + " cannot be resolved, ignoring");
         init(f.get(), nbt.contains(KEY_NBT) ? nbt.getCompound(KEY_NBT) : null);
     }
@@ -75,9 +76,9 @@ public class LFluidStack extends LStack<Fluid> {
     }
 
     private void init(Fluid fluid, @Nullable CompoundTag nbt) {
-        this.fluid = fluid;
+        this.fluid = Objects.requireNonNull(fluid);
         this.nbt = nbt;
-        temp = FluidStack.create(fluid, 1, nbt);
+        temp = FluidStack.create(fluid, 1);
     }
 
     public LFluidStack(LFluidStack lfs) {
@@ -100,7 +101,7 @@ public class LFluidStack extends LStack<Fluid> {
     public static String format(long amount) {
         float bucket = FluidStackHooks.bucketAmount();
         return amount >= bucket ? Utilities.cutNumber(amount / bucket, 4) + "B"
-                : amount + (Platform.isForge() ? "mB" : "U");
+                : amount + (Platform.isForgeLike() ? "mB" : "U");
     }
 
     @Override

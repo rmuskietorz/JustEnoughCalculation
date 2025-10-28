@@ -2,37 +2,34 @@ package me.towdium.jecalculation.network.packets;
 
 import dev.architectury.networking.NetworkManager;
 import me.towdium.jecalculation.JecaItem;
-import net.minecraft.network.FriendlyByteBuf;
+import me.towdium.jecalculation.JustEnoughCalculation;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Objects;
-import java.util.function.Supplier;
 
+public record PCalculator(ItemStack stack, int slot) implements CustomPacketPayload {
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(JustEnoughCalculation.MODID, "calculator");
+    public static final Type<PCalculator> TYPE = new Type<>(ID);
+    public static final StreamCodec<RegistryFriendlyByteBuf, PCalculator> STREAM_CODEC = StreamCodec.composite(
+            ItemStack.STREAM_CODEC, PCalculator::stack,
+            ByteBufCodecs.VAR_INT, PCalculator::slot,
+            PCalculator::new
+    );
 
-public class PCalculator {
-
-    ItemStack stack;
-    int slot;
-
-    public PCalculator(FriendlyByteBuf buf) {
-        stack = buf.readItem();
-        slot = buf.readInt();
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
 
-    public PCalculator(ItemStack stack, int slot) {
-        this.stack = stack;
-        this.slot = slot;
-    }
-
-    public void write(FriendlyByteBuf buf) {
-        buf.writeItem(stack);
-        buf.writeInt(slot);
-    }
-
-    public void handle(Supplier<NetworkManager.PacketContext> ctx) {
-        ctx.get().queue(() -> {
-            Inventory inventory = Objects.requireNonNull(ctx.get().getPlayer()).getInventory();
+    public void handle(NetworkManager.PacketContext ctx) {
+        ctx.queue(() -> {
+            Inventory inventory = Objects.requireNonNull(ctx.getPlayer()).getInventory();
             ItemStack calculator = inventory.getItem(slot);
             if (!calculator.isEmpty() && calculator.getItem() instanceof JecaItem) {
                 inventory.setItem(slot, stack);

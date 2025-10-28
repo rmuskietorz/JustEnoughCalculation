@@ -4,7 +4,7 @@ import dev.architectury.event.events.client.ClientLifecycleEvent;
 import dev.architectury.event.events.client.ClientPlayerEvent;
 import dev.architectury.event.events.common.LifecycleEvent;
 import dev.architectury.event.events.common.PlayerEvent;
-import dev.architectury.networking.NetworkChannel;
+import dev.architectury.networking.NetworkManager;
 import dev.architectury.platform.Platform;
 import dev.architectury.registry.client.keymappings.KeyMappingRegistry;
 import me.towdium.jecalculation.data.Controller;
@@ -20,7 +20,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -34,7 +34,7 @@ import static me.towdium.jecalculation.gui.JecaGui.keyOpenGuiMath;
 public class JustEnoughCalculation {
     public static final String MODID = "jecalculation";
     public static final String MODNAME = "Just Enough Calculation";
-    public static NetworkChannel network;
+    public static final NetworkHandler network = new NetworkHandler();
     public static Logger logger = LogManager.getLogger(MODID);
 
     @Environment(EnvType.CLIENT)
@@ -69,18 +69,65 @@ public class JustEnoughCalculation {
 
     public static void setupCommon() {
         Utilities.Greetings.send(logger, MODID);
-        network = NetworkChannel.create(new ResourceLocation(MODID, "main"));
-
-        network.register(PCalculator.class, PCalculator::write, PCalculator::new, PCalculator::handle);
-        network.register(PEdit.class, PEdit::write, PEdit::new, PEdit::handle);
-        network.register(PRecord.class, PRecord::write, PRecord::new, PRecord::handle);
+        network.registerServer();
         ILabel.initServer();
     }
 
     public static void setupClient(Minecraft minecraft) {
+        network.registerClient();
         ILabel.initClient();
         Controller.loadFromLocal();
         KeyMappingRegistry.register(keyOpenGuiCraft);
         KeyMappingRegistry.register(keyOpenGuiMath);
+    }
+
+    public static final class NetworkHandler {
+        private volatile boolean serverRegistered;
+        private volatile boolean clientRegistered;
+
+        public void registerServer() {
+            if (!serverRegistered) {
+                registerServerReceivers();
+            }
+        }
+
+        public void registerClient() {
+            if (!clientRegistered) {
+                registerClientReceivers();
+            }
+        }
+
+        private synchronized void registerServerReceivers() {
+            if (serverRegistered) {
+                return;
+            }
+            NetworkManager.registerReceiver(NetworkManager.Side.C2S, PCalculator.TYPE, PCalculator.STREAM_CODEC,
+                    (packet, context) -> packet.handle(context));
+            NetworkManager.registerReceiver(NetworkManager.Side.C2S, PEdit.TYPE, PEdit.STREAM_CODEC,
+                    (packet, context) -> packet.handle(context));
+            serverRegistered = true;
+        }
+
+        @Environment(EnvType.CLIENT)
+        private synchronized void registerClientReceivers() {
+            if (clientRegistered) {
+                return;
+            }
+            NetworkManager.registerReceiver(NetworkManager.Side.S2C, PRecord.TYPE, PRecord.STREAM_CODEC,
+                    (packet, context) -> packet.handle(context));
+            clientRegistered = true;
+        }
+
+        public void sendToServer(PCalculator packet) {
+            NetworkManager.sendToServer(packet);
+        }
+
+        public void sendToServer(PEdit packet) {
+            NetworkManager.sendToServer(packet);
+        }
+
+        public void sendToPlayer(ServerPlayer player, PRecord packet) {
+            NetworkManager.sendToPlayer(player, packet);
+        }
     }
 }

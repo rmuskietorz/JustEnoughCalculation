@@ -1,9 +1,9 @@
 package me.towdium.jecalculation.forge;
 
-import me.shedaniel.rei.forge.REIPluginClient;
+import me.shedaniel.rei.neoforge.REIPluginClient;
 import me.towdium.jecalculation.compat.rei.JecaREIPlugin;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 @REIPluginClient

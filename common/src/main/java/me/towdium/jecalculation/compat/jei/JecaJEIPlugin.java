@@ -84,7 +84,7 @@ public class JecaJEIPlugin implements IModPlugin {
 
     @Override
     public ResourceLocation getPluginUid() {
-        return new ResourceLocation(JustEnoughCalculation.MODID, "general");
+        return ResourceLocation.fromNamespaceAndPath(JustEnoughCalculation.MODID, "general");
     }
 
     @Override
@@ -106,9 +106,9 @@ public class JecaJEIPlugin implements IModPlugin {
     public void onRuntimeAvailable(IJeiRuntime jeiRuntime) {
         runtime = jeiRuntime;
         ModCompat.isJEILoaded = true;
-        if (Platform.isForge())
+        if (Platform.isNeoForge())
             try {
-                FORGE_FLUID_INGREDIENT_CLASS = Class.forName("net.minecraftforge.fluids.FluidStack");
+                FORGE_FLUID_INGREDIENT_CLASS = Class.forName("net.neoforged.neoforge.fluids.FluidStack");
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException("Forge fluid ingredient class should exist!", e);
             }

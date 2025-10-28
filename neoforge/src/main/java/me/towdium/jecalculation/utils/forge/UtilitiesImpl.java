@@ -12,12 +12,13 @@ import net.minecraft.world.item.ItemStack;
 
 public class UtilitiesImpl {
     public static CompoundTag getCap(ItemStack itemStack) {
-        CompoundTag nbt = itemStack.serializeNBT();
-        return nbt.contains("ForgeCaps") ? nbt.getCompound("ForgeCaps") : null;
+        // NeoForge speichert Item-Fähigkeiten nicht mehr über das alte ForgeCaps-NBT.
+        // Für die aktuelle Portierung behandeln wir Item-Capabilities daher wie nicht vorhanden.
+        return null;
     }
 
     public static ItemStack createItemStackWithCap(Item item, int count, CompoundTag cap) {
-        return new ItemStack(item, count, cap);
+        return new ItemStack(item, count);
     }
 
     public static RecordPlayer getRecord(Player player) {
@@ -33,7 +34,7 @@ public class UtilitiesImpl {
     }
 
     public static FluidStack createFluidStackFromJeiIngredient(Object object) {
-        if(object instanceof net.minecraftforge.fluids.FluidStack fluidStack)
+        if (object instanceof net.neoforged.neoforge.fluids.FluidStack fluidStack)
             return FluidStackHooksForge.fromForge(fluidStack);
         return null;
     }

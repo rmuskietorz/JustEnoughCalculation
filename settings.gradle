@@ -1,9 +1,17 @@
 pluginManagement {
     repositories {
+        maven { url uri("${rootDir}/local-maven") }
         maven { url "https://maven.fabricmc.net/" }
         maven { url "https://maven.architectury.dev/" }
         maven { url "https://maven.minecraftforge.net/" }
         gradlePluginPortal()
+    }
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == "dev.architectury.loom" && requested.version == "1.11.454-patched") {
+                useModule("dev.architectury:architectury-loom:1.11.454-patched")
+            }
+        }
     }
 }
 
@@ -11,6 +19,6 @@ include("common")
 include("fabric-like")
 include("fabric")
 include("quilt")
-include("forge")
+include("neoforge")
 
 rootProject.name = "jecalculation"

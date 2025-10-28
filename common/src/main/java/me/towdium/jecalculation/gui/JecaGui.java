@@ -8,7 +8,7 @@ import dev.architectury.event.events.client.ClientGuiEvent;
 import dev.architectury.event.events.client.ClientRawInputEvent;
 import dev.architectury.event.events.client.ClientScreenInputEvent;
 import dev.architectury.event.events.client.ClientTooltipEvent;
-import dev.architectury.hooks.fluid.FluidStackHooks;
+import dev.architectury.hooks.client.fluid.ClientFluidStackHooks;
 import me.towdium.jecalculation.data.Controller;
 import me.towdium.jecalculation.data.label.ILabel;
 import me.towdium.jecalculation.events.GuiScreenOverlayHandler;
@@ -492,12 +492,12 @@ public class JecaGui extends AbstractContainerScreen<JecaGui.JecaContainer> {
     }
 
     public void drawFluid(Fluid f, int xPos, int yPos, int xSize, int ySize) {
-        TextureAtlasSprite fluidTexture = FluidStackHooks.getStillTexture(f);
+        TextureAtlasSprite fluidTexture = ClientFluidStackHooks.getStillTexture(f);
         if (fluidTexture == null)
-            fluidTexture = FluidStackHooks.getStillTexture(Fluids.WATER);
+            fluidTexture = ClientFluidStackHooks.getStillTexture(Fluids.WATER);
         if (fluidTexture == null)
             return;
-        setColor(FluidStackHooks.getColor(f) & 0x00FFFFFF);
+        setColor(ClientFluidStackHooks.getColor(f) & 0x00FFFFFF);
         graphics.blit(xPos, yPos, 0, xSize, ySize, fluidTexture);
         RenderSystem.setShaderColor(1, 1, 1, 1);
     }

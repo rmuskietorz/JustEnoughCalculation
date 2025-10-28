@@ -185,14 +185,14 @@ public class Controller {
     private static <T extends IRecord> void setR(T t, Consumer<T> c, String s, @Nullable ItemStack is, int slot) {
         if (!isServerActive()) c.accept(t);
         else if (is != null) {
-            Utilities.getTag(is).put(s, t.serialize());
+            Utilities.editModData(is, data -> data.put(s, t.serialize()));
             network.sendToServer(new PCalculator(is, slot));
         }
     }
 
     public static <T> T getR(T t, String s, Function<CompoundTag, T> f, @Nullable ItemStack is) {
         if (!isServerActive()) return t;
-        else if (is != null) return f.apply(Utilities.getTag(is).getCompound(s));
+        else if (is != null) return f.apply(Utilities.getModData(is).getCompound(s));
         else throw new RuntimeException("Internal error");
     }
 

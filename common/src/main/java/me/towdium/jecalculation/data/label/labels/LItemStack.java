@@ -45,13 +45,14 @@ public class LItemStack extends LStack<Item> {
     // Convert from itemStack
     public LItemStack(ItemStack is) {
         super(is.getCount(), false);
-        init(is.getItem(), getCap(is), is.getTag(), false, false, false);
+        init(is.getItem(), getCap(is), Utilities.copyItemCustomData(is), false, false, false);
     }
 
     public LItemStack(CompoundTag tag) {
         super(tag);
         String id = tag.getString(KEY_ITEM);
-        Optional<Item> i = BuiltInRegistries.ITEM.getOptional(new ResourceLocation(id));
+        ResourceLocation location = ResourceLocation.tryParse(id);
+        Optional<Item> i = location == null ? Optional.empty() : BuiltInRegistries.ITEM.getOptional(location);
         if (i.isEmpty()) throw new SerializationException("Item " + id + " cannot be resolved, ignoring");
         init(i.get(), tag.contains(KEY_CAP) ? tag.getCompound(KEY_CAP) : null,
                 tag.contains(KEY_NBT) ? tag.getCompound(KEY_NBT) : null,
@@ -92,7 +93,7 @@ public class LItemStack extends LStack<Item> {
         this.fCap = fCap;
         this.fNbt = fNbt;
         rep = Utilities.createItemStackWithCap(item, 1, this.cap);
-        rep.setTag(this.nbt);
+        Utilities.applyItemCustomData(rep, this.nbt);
     }
 
     @Nullable

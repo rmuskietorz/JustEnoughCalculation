@@ -33,7 +33,7 @@ public class UtilitiesImpl {
 
     public static FluidStack createFluidStackFromJeiIngredient(Object object) {
         if (object instanceof IJeiFluidIngredient fluid)
-            return FluidStack.create(fluid.getFluid(), fluid.getAmount(), fluid.getTag().orElse(null));
+            return FluidStack.create(fluid.getFluid(), fluid.getAmount());
         return null;
     }
 }

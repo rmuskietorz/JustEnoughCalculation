@@ -1,21 +1,18 @@
 package me.towdium.jecalculation.forge;
 
 import dev.architectury.platform.Platform;
-import dev.architectury.platform.forge.EventBuses;
 import me.towdium.jecalculation.JecaCommand;
 import me.towdium.jecalculation.JustEnoughCalculation;
-import net.minecraftforge.client.event.RegisterClientCommandsEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModLoadingContext;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 
 @Mod(JustEnoughCalculation.MODID)
-@Mod.EventBusSubscriber
+@Mod.EventBusSubscriber(modid = JustEnoughCalculation.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class JustEnoughCalculationForge {
     public JustEnoughCalculationForge() {
-        EventBuses.registerModEventBus(JustEnoughCalculation.MODID, FMLJavaModLoadingContext.get().getModEventBus());
         //noinspection InstantiationOfUtilityClass
         new JustEnoughCalculation();
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, JecaConfig.common, Platform.getConfigFolder().resolve(JecaConfig.PATH).toString());

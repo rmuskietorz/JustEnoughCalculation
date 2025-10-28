@@ -1,14 +1,14 @@
 package me.towdium.jecalculation.forge;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class JecaConfig {
     public static final String PATH = "jecalculation/config.toml";
-    public static ForgeConfigSpec common;
-    public static ForgeConfigSpec.BooleanValue clientMode;
+    public static ModConfigSpec common;
+    public static ModConfigSpec.BooleanValue clientMode;
 
     static {
-        ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
+        ModConfigSpec.Builder b = new ModConfigSpec.Builder();
         b.push("General");
         clientMode = b.define("clientMode", false);
         b.pop();

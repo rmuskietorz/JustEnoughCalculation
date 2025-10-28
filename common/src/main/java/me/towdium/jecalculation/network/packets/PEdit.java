@@ -1,63 +1,62 @@
 package me.towdium.jecalculation.network.packets;
 
 import dev.architectury.networking.NetworkManager;
+import me.towdium.jecalculation.JustEnoughCalculation;
 import me.towdium.jecalculation.data.structure.Recipe;
 import me.towdium.jecalculation.utils.Utilities;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
-import java.util.function.Supplier;
 
-public class PEdit {
-    static final String KEY_OLD = "old";
-    static final String KEY_NEW = "new";
-    static final String KEY_INDEX = "index";
-    static final String KEY_RECIPE = "recipe";
+public record PEdit(String neu, @Nullable String old, int index, @Nullable Recipe recipe) implements CustomPacketPayload {
+    private static final String KEY_OLD = "old";
+    private static final String KEY_NEW = "new";
+    private static final String KEY_INDEX = "index";
+    private static final String KEY_RECIPE = "recipe";
 
-    String old, neu;
-    int index;
-    Recipe recipe;
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(JustEnoughCalculation.MODID, "edit");
+    public static final Type<PEdit> TYPE = new Type<>(ID);
+    public static final StreamCodec<RegistryFriendlyByteBuf, PEdit> STREAM_CODEC = StreamCodec.of(
+            (buf, payload) -> {
+                CompoundTag tag = new CompoundTag();
+                if (payload.old != null) {
+                    tag.putString(KEY_OLD, payload.old);
+                }
+                tag.putString(KEY_NEW, payload.neu);
+                tag.putInt(KEY_INDEX, payload.index);
+                if (payload.recipe != null) {
+                    tag.put(KEY_RECIPE, payload.recipe.serialize());
+                }
+                buf.writeNbt(tag);
+            },
+            buf -> {
+                CompoundTag tag = buf.readNbt();
+                if (tag == null) {
+                    tag = new CompoundTag();
+                }
+                String old = tag.contains(KEY_OLD) ? tag.getString(KEY_OLD) : null;
+                String neu = tag.getString(KEY_NEW);
+                int index = tag.getInt(KEY_INDEX);
+                Recipe recipe = tag.contains(KEY_RECIPE) ? new Recipe(tag.getCompound(KEY_RECIPE)) : null;
+                return new PEdit(neu, old, index, recipe);
+            }
+    );
 
-    public PEdit() {
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
 
-    // set recipe: Y Y/null Y Y
-    // rename group: Y Y -1 null
-    // add recipe: Y null -1 Y
-    // remove recipe: Y null Y null
-    // remove group: Y null -1 null
-    public PEdit(String neu, @Nullable String old, int index, @Nullable Recipe recipe) {
-        this.neu = neu;
-        this.old = old;
-        this.index = index;
-        this.recipe = recipe;
-    }
-
-    public PEdit(FriendlyByteBuf buf) {
-        CompoundTag tag = buf.readNbt();
-        tag = tag == null ? new CompoundTag() : tag;
-        old = tag.contains(KEY_OLD) ? tag.getString(KEY_OLD) : null;
-        neu = tag.getString(KEY_NEW);
-        index = tag.getInt(KEY_INDEX);
-        recipe = tag.contains(KEY_RECIPE) ? new Recipe(tag.getCompound(KEY_RECIPE)) : null;
-    }
-
-    public void write(FriendlyByteBuf buf) {
-        CompoundTag tag = new CompoundTag();
-        if (old != null) tag.putString(KEY_OLD, old);
-        tag.putString(KEY_NEW, neu);
-        tag.putInt(KEY_INDEX, index);
-        if (recipe != null) tag.put(KEY_RECIPE, recipe.serialize());
-        buf.writeNbt(tag);
-    }
-
-    public void handle(Supplier<NetworkManager.PacketContext> ctx) {
-        ctx.get().queue(() -> {
-            Utilities.getRecord(Objects.requireNonNull(ctx.get().getPlayer())).recipes
+    public void handle(NetworkManager.PacketContext ctx) {
+        ctx.queue(() -> {
+            Utilities.getRecord(Objects.requireNonNull(ctx.getPlayer())).recipes
                     .modify(neu, old, index, recipe);
-            Utilities.getRecord(Objects.requireNonNull(ctx.get().getPlayer())).last = old;
+            Utilities.getRecord(Objects.requireNonNull(ctx.getPlayer())).last = old;
         });
     }
 }

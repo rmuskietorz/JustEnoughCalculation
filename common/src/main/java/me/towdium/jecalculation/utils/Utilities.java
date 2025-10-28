@@ -2,7 +2,7 @@ package me.towdium.jecalculation.utils;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.architectury.fluid.FluidStack;
-import dev.architectury.hooks.fluid.FluidStackHooks;
+import dev.architectury.hooks.client.fluid.ClientFluidStackHooks;
 import dev.architectury.injectables.annotations.ExpectPlatform;
 import dev.architectury.platform.Mod;
 import dev.architectury.platform.Platform;
@@ -21,6 +21,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -31,6 +32,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.material.Fluid;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.text.WordUtils;
@@ -47,6 +49,7 @@ import java.text.DecimalFormat;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -144,14 +147,28 @@ public class Utilities {
         throw new AssertionError();
     }
 
-    public static TagKey<Item> IRON_INGOTS = tag(Registries.ITEM, Platform.isForge() ? "ingots/iron" : "iron_ingots");
+    @Nullable
+    public static CompoundTag copyItemCustomData(ItemStack stack) {
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        return data != null ? data.copyTag() : null;
+    }
+
+    public static void applyItemCustomData(ItemStack stack, @Nullable CompoundTag tag) {
+        if (tag == null || tag.isEmpty()) {
+            stack.remove(DataComponents.CUSTOM_DATA);
+        } else {
+            stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        }
+    }
+
+    public static TagKey<Item> IRON_INGOTS = tag(Registries.ITEM, Platform.isForgeLike() ? "ingots/iron" : "iron_ingots");
 
     public static <T> TagKey<T> tag(ResourceKey<? extends Registry<T>> key, String tag) {
-        return TagKey.create(key, new ResourceLocation(getTagNamespace(), tag));
+        return TagKey.create(key, ResourceLocation.fromNamespaceAndPath(getTagNamespace(), tag));
     }
 
     public static String getTagNamespace() {
-        return Platform.isForge() ? "forge" : "c";
+        return Platform.isForgeLike() ? "forge" : "c";
     }
 
     // MOD NAME
@@ -181,7 +198,7 @@ public class Utilities {
         FluidStack fs = FluidStack.create(fluid, 1000);
         String name = fs.getName().getString(); //.getFormattedText();
         if (name.equals("lava") || name.equals("water")) return "Minecraft";
-        TextureAtlasSprite texture = FluidStackHooks.getStillTexture(fluid);
+        TextureAtlasSprite texture = ClientFluidStackHooks.getStillTexture(fluid);
         if (texture == null) return "Unknown";
         else return getModName(texture.atlasLocation().getNamespace());
     }
@@ -190,8 +207,35 @@ public class Utilities {
         return Platform.getConfigFolder().resolve(JustEnoughCalculation.MODID).toFile();
     }
 
-    public static CompoundTag getTag(ItemStack is) {
-        return is.getOrCreateTagElement(JustEnoughCalculation.MODID);
+    @Nullable
+    private static CompoundTag getCustomDataRoot(ItemStack stack) {
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        return data != null ? data.copyTag() : null;
+    }
+
+    public static CompoundTag getModData(ItemStack stack) {
+        CompoundTag root = getCustomDataRoot(stack);
+        return root != null ? root.getCompound(JustEnoughCalculation.MODID) : new CompoundTag();
+    }
+
+    public static void editModData(ItemStack stack, Consumer<CompoundTag> editor) {
+        CompoundTag root = getCustomDataRoot(stack);
+        if (root == null) {
+            root = new CompoundTag();
+        }
+        CompoundTag modTag = root.contains(JustEnoughCalculation.MODID, Tag.TAG_COMPOUND)
+                ? root.getCompound(JustEnoughCalculation.MODID)
+                : new CompoundTag();
+
+        editor.accept(modTag);
+
+        if (modTag.isEmpty()) {
+            root.remove(JustEnoughCalculation.MODID);
+        } else {
+            root.put(JustEnoughCalculation.MODID, modTag);
+        }
+
+        applyItemCustomData(stack, root.isEmpty() ? null : root);
     }
 
     public static LocalPlayer getPlayer() {

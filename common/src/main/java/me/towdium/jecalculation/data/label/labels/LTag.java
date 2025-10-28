@@ -50,7 +50,12 @@ public abstract class LTag<T> extends LContext<T> {
 
     public LTag(CompoundTag nbt) {
         super(nbt);
-        name = TagKey.create(getRegistry().key(), new ResourceLocation(nbt.getString(KEY_NAME)));
+        String id = nbt.getString(KEY_NAME);
+        ResourceLocation location = ResourceLocation.tryParse(id);
+        if (location == null) {
+            throw new IllegalArgumentException("Invalid tag location: " + id);
+        }
+        name = TagKey.create(getRegistry().key(), location);
     }
 
     protected abstract Registry<T> getRegistry();
