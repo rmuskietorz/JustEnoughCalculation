@@ -30,7 +30,7 @@ side="BOTH"
 [[dependencies.jecalculation]]
 modId="architectury"
 type="required"
-versionRange="[18.0.4,)"
+versionRange="[14.0.3,)"
 ordering="AFTER"
 side="BOTH"
 
@@ -44,6 +44,6 @@ side="BOTH"
 [[dependencies.jecalculation]]
 modId="roughlyenoughitems"
 type="optional"
-versionRange="[20.0.811,)"
+versionRange="[18.0.795,)"
 ordering="NONE"
 side="BOTH"

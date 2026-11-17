@@ -16,6 +16,8 @@ loom {
     }
 }
 
+def includeReiRuntime = rootProject.findProperty("include_rei_runtime")?.toString()?.toBoolean() ?: false
+
 configurations {
     common
     shadowCommon // Don't use shadow from the shadow plugin because we don't want IDEA to index this.
@@ -32,7 +34,10 @@ dependencies {
     //modRuntimeOnly("mezz.jei:jei-${rootProject.minecraft_version}-neoforge:${rootProject.jei_version}")
 
     modRuntimeOnly("mezz.jei:jei-${rootProject.minecraft_version}-neoforge:${rootProject.jei_version}")
-    modImplementation("me.shedaniel:RoughlyEnoughItems-neoforge:${rootProject.rei_version}")
+    modCompileOnly("me.shedaniel:RoughlyEnoughItems-neoforge:${rootProject.rei_version}")
+    if (includeReiRuntime) {
+        modRuntimeOnly("me.shedaniel:RoughlyEnoughItems-neoforge:${rootProject.rei_version}")
+    }
 
     common(project(path: ":common", configuration: "namedElements")) { transitive false }
     shadowCommon(project(path: ":common", configuration: "transformProductionNeoForge")) { transitive = false }

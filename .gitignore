@@ -8,6 +8,7 @@ out/
 output/
 bin/
 libs/
+.jdk/
 
 .classpath
 .project

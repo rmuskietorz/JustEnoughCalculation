@@ -38,7 +38,7 @@ public class WTextField implements IWidget {
 
     @Override
     public void onTick(JecaGui gui) {
-        textField.tick();
+        // EditBox no longer exposes a tick hook in 1.21; nothing to update per tick here.
     }
 
     @Override

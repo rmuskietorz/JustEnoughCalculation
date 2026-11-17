@@ -11,6 +11,7 @@ import me.towdium.jecalculation.utils.Utilities;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.material.Fluid;
 
@@ -27,10 +28,11 @@ import java.util.*;
 public class LFluidStack extends LStack<Fluid> {
     public static final String IDENTIFIER = "fluidStack";
     public static final String KEY_FLUID = "fluid";
-    public static final String KEY_NBT = "nbt";
+    public static final String KEY_COMPONENTS = "components";
+    public static final String KEY_NBT = "nbt"; // legacy
 
     Fluid fluid;
-    CompoundTag nbt;
+    CompoundTag components;
     FluidStack temp;
 
     @Override
@@ -44,16 +46,16 @@ public class LFluidStack extends LStack<Fluid> {
     }
 
     public LFluidStack(FluidStack fs) {
-        this(fs.getAmount(), fs.getFluid(), null);
+        this(fs.getAmount(), fs.getFluid(), Utilities.copyFluidComponents(fs));
     }
 
     public LFluidStack(long amount, Fluid fluid) {
         this(amount, fluid, null);
     }
 
-    public LFluidStack(long amount, Fluid fluid, @Nullable CompoundTag nbt) {
+    public LFluidStack(long amount, Fluid fluid, @Nullable CompoundTag components) {
         super(amount, false);
-        init(fluid, nbt);
+        init(fluid, components);
     }
 
     public LFluidStack(CompoundTag nbt) {
@@ -62,7 +64,10 @@ public class LFluidStack extends LStack<Fluid> {
         ResourceLocation location = ResourceLocation.tryParse(id);
         Optional<Fluid> f = location == null ? Optional.empty() : BuiltInRegistries.FLUID.getOptional(location);
         if (f.isEmpty()) throw new SerializationException("Fluid " + id + " cannot be resolved, ignoring");
-        init(f.get(), nbt.contains(KEY_NBT) ? nbt.getCompound(KEY_NBT) : null);
+        CompoundTag serializedComponents = nbt.contains(KEY_COMPONENTS, Tag.TAG_COMPOUND)
+                ? nbt.getCompound(KEY_COMPONENTS)
+                : nbt.contains(KEY_NBT, Tag.TAG_COMPOUND) ? nbt.getCompound(KEY_NBT) : null;
+        init(f.get(), serializedComponents);
     }
 
     @Override
@@ -75,16 +80,17 @@ public class LFluidStack extends LStack<Fluid> {
         return Context.FLUID;
     }
 
-    private void init(Fluid fluid, @Nullable CompoundTag nbt) {
+    private void init(Fluid fluid, @Nullable CompoundTag components) {
         this.fluid = Objects.requireNonNull(fluid);
-        this.nbt = nbt;
+        this.components = components == null ? null : components.copy();
         temp = FluidStack.create(fluid, 1);
+        Utilities.applyFluidComponents(temp, this.components);
     }
 
     public LFluidStack(LFluidStack lfs) {
         super(lfs);
         fluid = lfs.fluid;
-        nbt = lfs.nbt;
+        components = lfs.components == null ? null : lfs.components.copy();
         temp = lfs.temp;
     }
 
@@ -117,7 +123,7 @@ public class LFluidStack extends LStack<Fluid> {
     @Override
     public boolean matches(Object l) {
         if (l instanceof LFluidStack lfs) {
-            return (Objects.equals(nbt, lfs.nbt)) && fluid == lfs.fluid;
+            return Objects.equals(components, lfs.components) && fluid == lfs.fluid;
         } else return false;
     }
 
@@ -131,7 +137,7 @@ public class LFluidStack extends LStack<Fluid> {
         CompoundTag ret = super.toNbt();
         //noinspection ConstantConditions
         ret.putString(KEY_FLUID, BuiltInRegistries.FLUID.getKey(fluid).toString());
-        if (nbt != null) ret.put(KEY_NBT, nbt);
+        if (components != null) ret.put(KEY_COMPONENTS, components);
         return ret;
     }
 
@@ -148,7 +154,7 @@ public class LFluidStack extends LStack<Fluid> {
 
     @Override
     public int hashCode() {
-        return super.hashCode() ^ BuiltInRegistries.FLUID.getKey(fluid).hashCode() ^ (nbt == null ? 0 : nbt.hashCode());
+        return super.hashCode() ^ BuiltInRegistries.FLUID.getKey(fluid).hashCode() ^ (components == null ? 0 : components.hashCode());
     }
 
     private static final String TIC_CLASS = "slimeknights.tconstruct.plugin.jei.casting.CastingRecipeCategory";

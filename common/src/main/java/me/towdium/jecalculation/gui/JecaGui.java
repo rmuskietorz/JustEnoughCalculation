@@ -8,7 +8,7 @@ import dev.architectury.event.events.client.ClientGuiEvent;
 import dev.architectury.event.events.client.ClientRawInputEvent;
 import dev.architectury.event.events.client.ClientScreenInputEvent;
 import dev.architectury.event.events.client.ClientTooltipEvent;
-import dev.architectury.hooks.client.fluid.ClientFluidStackHooks;
+import dev.architectury.hooks.fluid.FluidStackHooks;
 import me.towdium.jecalculation.data.Controller;
 import me.towdium.jecalculation.data.label.ILabel;
 import me.towdium.jecalculation.events.GuiScreenOverlayHandler;
@@ -90,7 +90,7 @@ public class JecaGui extends AbstractContainerScreen<JecaGui.JecaContainer> {
     }
 
     public JecaGui(@Nullable JecaGui parent, boolean acceptsTransfer, IGui root, boolean isWidget) {
-        super(acceptsTransfer ? new JecaGui.ContainerTransfer() : new JecaGui.ContainerNonTransfer(),
+        super(acceptsTransfer ? new ContainerTransfer() : new ContainerNonTransfer(),
                 getPlayer().getInventory(), Component.literal(""));
         this.parent = parent;
         this.root = root;
@@ -106,7 +106,6 @@ public class JecaGui extends AbstractContainerScreen<JecaGui.JecaContainer> {
         ClientScreenInputEvent.MOUSE_CLICKED_PRE.register(JecaGui::onMouseClicked);
         ClientScreenInputEvent.MOUSE_DRAGGED_PRE.register(JecaGui::onMouseDragged);
         ClientScreenInputEvent.MOUSE_RELEASED_PRE.register(JecaGui::onMouseReleased);
-
         ClientRawInputEvent.KEY_PRESSED.register(JecaGui::onKeyPressed);
     }
 
@@ -148,6 +147,14 @@ public class JecaGui extends AbstractContainerScreen<JecaGui.JecaContainer> {
         return (int) mc.mouseHandler.ypos() * mc.getWindow().getGuiScaledHeight() / windowHeight - gui.topPos;
     }
 
+    private static int toLocalMouseX(JecaGui gui, double mouseX) {
+        return (int) (mouseX - gui.leftPos);
+    }
+
+    private static int toLocalMouseY(JecaGui gui, double mouseY) {
+        return (int) (mouseY - gui.topPos);
+    }
+
     public int getGlobalMouseX() {
         Minecraft mc = Objects.requireNonNull(Minecraft.getInstance(), "Internal error");
         int width = mc.getWindow().getWidth();
@@ -184,10 +191,9 @@ public class JecaGui extends AbstractContainerScreen<JecaGui.JecaContainer> {
 
 
     public static EventResult onFocused(Minecraft client, Screen screen, double mouseX, double mouseY, int button) {
-        if (!(screen instanceof JecaGui)) return pass();
-        JecaGui gui = getCurrent();
-        int xMouse = getMouseX();
-        int yMouse = getMouseY();
+        if (!(screen instanceof JecaGui gui)) return pass();
+        int xMouse = toLocalMouseX(gui, mouseX);
+        int yMouse = toLocalMouseY(gui, mouseY);
         gui.root.onMouseFocused(gui, xMouse, yMouse, button);
         ILabel e = Utilities.getLabelUnderMouse();
         if (e != ILabel.EMPTY) {
@@ -199,10 +205,9 @@ public class JecaGui extends AbstractContainerScreen<JecaGui.JecaContainer> {
     }
 
     public static EventResult onMouseClicked(Minecraft client, Screen screen, double mouseX, double mouseY, int button) {
-        if (!(screen instanceof JecaGui)) return pass();
-        JecaGui gui = getCurrent();
-        int xMouse = getMouseX();
-        int yMouse = getMouseY();
+        if (!(screen instanceof JecaGui gui)) return pass();
+        int xMouse = toLocalMouseX(gui, mouseX);
+        int yMouse = toLocalMouseY(gui, mouseY);
         if (gui.root.onMouseClicked(gui, xMouse, yMouse, button))
             return interruptFalse();
         else if (gui.hand != ILabel.EMPTY) {
@@ -214,31 +219,28 @@ public class JecaGui extends AbstractContainerScreen<JecaGui.JecaContainer> {
     }
 
 
-    public static EventResult onMouseScroll(Minecraft client, Screen screen, double mouseX, double mouseY, double amount) {
-        if (!(screen instanceof JecaGui)) return pass();
-        JecaGui gui = getCurrent();
-        int xMouse = getMouseX();
-        int yMouse = getMouseY();
-        if (amount != 0)
-            gui.root.onMouseScroll(gui, xMouse, yMouse, (int) amount);
+    public static EventResult onMouseScroll(Minecraft client, Screen screen, double mouseX, double mouseY, double amountX, double amountY) {
+        if (!(screen instanceof JecaGui gui)) return pass();
+        int xMouse = toLocalMouseX(gui, mouseX);
+        int yMouse = toLocalMouseY(gui, mouseY);
+        if (amountY != 0)
+            gui.root.onMouseScroll(gui, xMouse, yMouse, (int) amountY);
         return pass();
     }
 
     public static EventResult onMouseReleased(Minecraft minecraft, Screen screen, double mouseX, double mouseY, int button) {
-        if (!(screen instanceof JecaGui)) return pass();
-        JecaGui gui = getCurrent();
-        int xMouse = getMouseX();
-        int yMouse = getMouseY();
+        if (!(screen instanceof JecaGui gui)) return pass();
+        int xMouse = toLocalMouseX(gui, mouseX);
+        int yMouse = toLocalMouseY(gui, mouseY);
         gui.root.onMouseReleased(gui, xMouse, yMouse, button);
         return gui.hand == ILabel.EMPTY ? pass() : interruptFalse();
     }
 
-    public static EventResult onMouseDragged(Minecraft client, Screen screen, double mouseX1, double mouseY1, int button, double mouseX2, double mouseY2) {
-        if (!(screen instanceof JecaGui)) return pass();
-        JecaGui gui = getCurrent();
-        int xMouse = getMouseX();
-        int yMouse = getMouseY();
-        gui.root.onMouseDragged(gui, xMouse, yMouse, (int) mouseX2, (int) mouseY2);
+    public static EventResult onMouseDragged(Minecraft client, Screen screen, double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        if (!(screen instanceof JecaGui gui)) return pass();
+        int xMouse = toLocalMouseX(gui, mouseX);
+        int yMouse = toLocalMouseY(gui, mouseY);
+        gui.root.onMouseDragged(gui, xMouse, yMouse, (int) deltaX, (int) deltaY);
         return pass();
     }
 
@@ -393,7 +395,7 @@ public class JecaGui extends AbstractContainerScreen<JecaGui.JecaContainer> {
 
     @Override
     protected void renderBg(GuiGraphics matrixGraphics, float partialTicks, int x, int y) {
-        renderBackground(matrixGraphics);
+        renderBackground(matrixGraphics, x, y, partialTicks);
     }
 
     @Override
@@ -417,7 +419,7 @@ public class JecaGui extends AbstractContainerScreen<JecaGui.JecaContainer> {
     }
 
     // modified from vanilla
-    public void drawHoveringText(GuiGraphics matrixGraphics, List<String> textLines, int x, int y, net.minecraft.client.gui.Font font) {
+    public void drawHoveringText(GuiGraphics matrixGraphics, List<String> textLines, int x, int y, Font font) {
         if (!textLines.isEmpty()) {
             var pose = matrixGraphics.pose();
             RenderSystem.setShader(GameRenderer::getPositionColorShader);
@@ -492,12 +494,12 @@ public class JecaGui extends AbstractContainerScreen<JecaGui.JecaContainer> {
     }
 
     public void drawFluid(Fluid f, int xPos, int yPos, int xSize, int ySize) {
-        TextureAtlasSprite fluidTexture = ClientFluidStackHooks.getStillTexture(f);
+        TextureAtlasSprite fluidTexture = FluidStackHooks.getStillTexture(f);
         if (fluidTexture == null)
-            fluidTexture = ClientFluidStackHooks.getStillTexture(Fluids.WATER);
+            fluidTexture = FluidStackHooks.getStillTexture(Fluids.WATER);
         if (fluidTexture == null)
             return;
-        setColor(ClientFluidStackHooks.getColor(f) & 0x00FFFFFF);
+        setColor(FluidStackHooks.getColor(f) & 0x00FFFFFF);
         graphics.blit(xPos, yPos, 0, xSize, ySize, fluidTexture);
         RenderSystem.setShaderColor(1, 1, 1, 1);
     }

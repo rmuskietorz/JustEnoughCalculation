@@ -1,24 +1,25 @@
 package me.towdium.jecalculation.forge;
 
-import dev.architectury.platform.Platform;
 import me.towdium.jecalculation.JecaCommand;
 import me.towdium.jecalculation.JustEnoughCalculation;
-import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModLoadingContext;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
+import net.neoforged.neoforge.common.NeoForge;
 
 @Mod(JustEnoughCalculation.MODID)
-@Mod.EventBusSubscriber(modid = JustEnoughCalculation.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class JustEnoughCalculationForge {
     public JustEnoughCalculationForge() {
         //noinspection InstantiationOfUtilityClass
         new JustEnoughCalculation();
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, JecaConfig.common, Platform.getConfigFolder().resolve(JecaConfig.PATH).toString());
+        ModContainer container = ModLoadingContext.get().getActiveContainer();
+        container.registerConfig(ModConfig.Type.COMMON, JecaConfig.common);
+        NeoForge.EVENT_BUS.addListener(JustEnoughCalculationForge::registerClientCommands);
+        NeoForge.EVENT_BUS.addListener(JecaCapability::registerAttachments);
     }
 
-    @SubscribeEvent
     public static void registerClientCommands(RegisterClientCommandsEvent event) {
         JecaCommand.register(event.getDispatcher());
     }

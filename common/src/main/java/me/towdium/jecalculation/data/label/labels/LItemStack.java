@@ -10,6 +10,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -30,13 +31,14 @@ public class LItemStack extends LStack<Item> {
     public static final String KEY_ITEM = "item";
     public static final String KEY_NBT = "nbt";
     public static final String KEY_CAP = "cap";
+    public static final String KEY_COMPONENTS = "components";
     public static final String KEY_F_META = "fMeta";
     public static final String KEY_F_CAP = "fCap";
     public static final String KEY_F_NBT = "fNbt";
 
     Item item;
     CompoundTag nbt;
-    CompoundTag cap;
+    CompoundTag components;
     boolean fMeta;
     boolean fNbt;
     boolean fCap;
@@ -45,7 +47,7 @@ public class LItemStack extends LStack<Item> {
     // Convert from itemStack
     public LItemStack(ItemStack is) {
         super(is.getCount(), false);
-        init(is.getItem(), getCap(is), Utilities.copyItemCustomData(is), false, false, false);
+        init(is.getItem(), Utilities.copyItemComponents(is), Utilities.copyItemCustomData(is), false, false, false);
     }
 
     public LItemStack(CompoundTag tag) {
@@ -54,7 +56,10 @@ public class LItemStack extends LStack<Item> {
         ResourceLocation location = ResourceLocation.tryParse(id);
         Optional<Item> i = location == null ? Optional.empty() : BuiltInRegistries.ITEM.getOptional(location);
         if (i.isEmpty()) throw new SerializationException("Item " + id + " cannot be resolved, ignoring");
-        init(i.get(), tag.contains(KEY_CAP) ? tag.getCompound(KEY_CAP) : null,
+        CompoundTag serializedComponents = tag.contains(KEY_COMPONENTS, Tag.TAG_COMPOUND)
+                ? tag.getCompound(KEY_COMPONENTS)
+                : tag.contains(KEY_CAP, Tag.TAG_COMPOUND) ? tag.getCompound(KEY_CAP) : null;
+        init(i.get(), serializedComponents,
                 tag.contains(KEY_NBT) ? tag.getCompound(KEY_NBT) : null,
                 tag.getBoolean(KEY_F_META),
                 tag.getBoolean(KEY_F_CAP),
@@ -76,29 +81,25 @@ public class LItemStack extends LStack<Item> {
         super(lis);
         item = lis.item;
         nbt = lis.nbt == null ? null : lis.nbt.copy();
-        cap = lis.cap == null ? null : lis.cap.copy();
+        components = lis.components == null ? null : lis.components.copy();
         fMeta = lis.fMeta;
         fNbt = lis.fNbt;
         fCap = lis.fCap;
         rep = lis.rep;
     }
 
-    private void init(@Nullable Item item, @Nullable CompoundTag cap,
+    private void init(@Nullable Item item, @Nullable CompoundTag componentPatch,
                       @Nullable CompoundTag nbt, boolean fMeta, boolean fCap, boolean fNbt) {
         Objects.requireNonNull(item);
         this.item = item;
-        this.cap = cap;
-        this.nbt = nbt;
+        this.components = componentPatch == null ? null : componentPatch.copy();
+        this.nbt = nbt == null ? null : nbt.copy();
         this.fMeta = fMeta;
         this.fCap = fCap;
         this.fNbt = fNbt;
-        rep = Utilities.createItemStackWithCap(item, 1, this.cap);
+        rep = new ItemStack(item);
+        Utilities.applyItemComponents(rep, this.components);
         Utilities.applyItemCustomData(rep, this.nbt);
-    }
-
-    @Nullable
-    private static CompoundTag getCap(ItemStack is) {
-        return Utilities.getCap(is);
     }
 
     public static boolean merge(ILabel a, ILabel b) {
@@ -112,9 +113,9 @@ public class LItemStack extends LStack<Item> {
                 } else if (lisB.nbt == null || !lisA.nbt.equals(lisB.nbt)) return false;
             }
             if (!lisA.fCap && !lisB.fCap) {
-                if (lisA.cap == null) {
-                    if (lisB.cap != null) return false;
-                } else if (lisB.cap == null || !lisA.cap.equals(lisB.cap)) return false;
+                if (lisA.components == null) {
+                    if (lisB.components != null) return false;
+                } else if (lisB.components == null || !lisA.components.equals(lisB.components)) return false;
             }
             return lisA.item == lisB.item;
         }
@@ -133,7 +134,7 @@ public class LItemStack extends LStack<Item> {
             if (ii.item != lis.item) return new ArrayList<>();
             if (ii.rep.getDamageValue() != lis.rep.getDamageValue() || ii.fMeta) fMeta = true;
             if (!Objects.equals(ii.nbt, lis.nbt)) fNbt = true;
-            if (!Objects.equals(ii.cap, lis.cap)) fCap = true;
+            if (!Objects.equals(ii.components, lis.components)) fCap = true;
         }
         if (fMeta || fNbt || fCap) return Collections.singletonList(
                 lis.copy().setFCap(fCap).setFMeta(fMeta).setFNbt(fNbt));
@@ -197,7 +198,7 @@ public class LItemStack extends LStack<Item> {
     public boolean matches(Object l) {
         if (l instanceof LItemStack lis) {
             return Objects.equals(nbt, lis.nbt)
-                    && Objects.equals(cap, lis.cap)
+                    && Objects.equals(components, lis.components)
                     && item == lis.item
                     && fNbt == lis.fNbt && super.matches(l)
                     && fCap == lis.fCap && fMeta == lis.fMeta;
@@ -217,7 +218,7 @@ public class LItemStack extends LStack<Item> {
         CompoundTag ret = super.toNbt();
         ret.putString(KEY_ITEM, rl.toString());
         if (nbt != null) ret.put(KEY_NBT, nbt);
-        if (cap != null) ret.put(KEY_CAP, cap);
+        if (components != null) ret.put(KEY_COMPONENTS, components);
         if (fMeta) ret.putBoolean(KEY_F_META, true);
         if (fNbt) ret.putBoolean(KEY_F_NBT, true);
         if (fCap) ret.putBoolean(KEY_F_CAP, true);
@@ -236,7 +237,7 @@ public class LItemStack extends LStack<Item> {
 
     @Override
     public int hashCode() {
-        return (nbt == null ? 0 : nbt.hashCode()) ^ (cap == null ? 0 : cap.hashCode())
+        return (nbt == null ? 0 : nbt.hashCode()) ^ (components == null ? 0 : components.hashCode())
                 ^ item.getDescriptionId().hashCode() ^ super.hashCode();
     }
 }

@@ -18,6 +18,7 @@ import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
 import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.world.entity.player.Inventory;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -73,7 +74,7 @@ public class GuiScreenEventHandler {
                 && !(screen instanceof JecaGui);
     }
 
-    public void onDrawForeground(Screen screen, GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
+    public void onDrawForeground(Screen screen, GuiGraphics graphics, int mouseX, int mouseY, DeltaTracker delta) {
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
         if (player == null || overlayHandler == null || !isScreenValidForOverlay(screen)) {
@@ -91,18 +92,20 @@ public class GuiScreenEventHandler {
         }
 
         gui.setGraphics(graphics);
-        mouseX = gui.getGlobalMouseX();
-        mouseY = gui.getGlobalMouseY();
+        int absoluteMouseX = mouseX;
+        int absoluteMouseY = mouseY;
+        int relativeMouseX = absoluteMouseX - gui.getGuiLeft();
+        int relativeMouseY = absoluteMouseY - gui.getGuiTop();
 
         var poseStack = graphics.pose();
         poseStack.pushPose();
         poseStack.translate(gui.getGuiLeft(), gui.getGuiTop(), 0);
-        overlayHandler.onDraw(gui, mouseX, mouseY);
+        overlayHandler.onDraw(gui, relativeMouseX, relativeMouseY);
         poseStack.popPose();
 
         List<String> tooltip = new ArrayList<>();
-        overlayHandler.onTooltip(gui, mouseX, mouseY, tooltip);
-        gui.drawHoveringText(graphics, tooltip, mouseX + gui.getGuiLeft(), mouseY + gui.getGuiTop(), minecraft.font);
+        overlayHandler.onTooltip(gui, relativeMouseX, relativeMouseY, tooltip);
+        gui.drawHoveringText(graphics, tooltip, absoluteMouseX, absoluteMouseY, minecraft.font);
         if (cachedTooltipEvent != null) {
             graphics.renderTooltipInternal(minecraft.font, (List<ClientTooltipComponent>) cachedTooltipEvent.one, cachedTooltipEvent.two, cachedTooltipEvent.three, DefaultTooltipPositioner.INSTANCE);
             cachedTooltipEvent = null;
@@ -119,17 +122,19 @@ public class GuiScreenEventHandler {
         return interruptFalse();
     }
 
-    public EventResult onMouseScroll(Minecraft client, Screen screen, double mouseX, double mouseY, double amount) {
+    public EventResult onMouseScroll(Minecraft client, Screen screen, double mouseX, double mouseY, double amountX, double amountY) {
         if (overlayHandler == null || !isScreenValidForOverlay(screen))
             return pass();
-        return amount != 0 && overlayHandler.onMouseScroll(gui, gui.getGlobalMouseX(), gui.getGlobalMouseY(), (int) amount) ? interruptFalse() : pass();
+        int relativeMouseX = toLocalMouseX(mouseX);
+        int relativeMouseY = toLocalMouseY(mouseY);
+        return amountY != 0 && overlayHandler.onMouseScroll(gui, relativeMouseX, relativeMouseY, (int) amountY) ? interruptFalse() : pass();
     }
 
     public EventResult onMouseClicked(Minecraft client, Screen screen, double mouseX, double mouseY, int button) {
         if (overlayHandler == null || !isScreenValidForOverlay(screen))
             return pass();
-        int xMouse = gui.getGlobalMouseX();
-        int yMouse = gui.getGlobalMouseY();
+        int xMouse = toLocalMouseX(mouseX);
+        int yMouse = toLocalMouseY(mouseY);
         overlayHandler.onMouseFocused(gui, xMouse, yMouse, button);
         return overlayHandler.onMouseClicked(gui, xMouse, yMouse, button) ? interruptFalse() : pass();
     }
@@ -137,15 +142,18 @@ public class GuiScreenEventHandler {
     public EventResult onMouseReleased(Minecraft minecraft, Screen screen, double mouseX, double mouseY, int button) {
         if (overlayHandler == null || !isScreenValidForOverlay(screen))
             return pass();
-        return overlayHandler.onMouseReleased(gui, gui.getGlobalMouseX(), gui.getGlobalMouseY(), button) ? interruptFalse() : pass();
+        int xMouse = toLocalMouseX(mouseX);
+        int yMouse = toLocalMouseY(mouseY);
+        return overlayHandler.onMouseReleased(gui, xMouse, yMouse, button) ? interruptFalse() : pass();
     }
 
-    public EventResult onMouseDragged(Minecraft client, Screen screen, double mouseX1, double mouseY1, int button, double mouseX2, double mouseY2) {
+    public EventResult onMouseDragged(Minecraft client, Screen screen, double mouseX, double mouseY, int button, double deltaX, double deltaY) {
         if (overlayHandler == null || !isScreenValidForOverlay(screen))
             return pass();
-        return overlayHandler.onMouseDragged(gui, gui.getGlobalMouseX(), gui.getGlobalMouseY(), (int) mouseX2, (int) mouseY2) ? interruptFalse() : pass();
+        int xMouse = toLocalMouseX(mouseX);
+        int yMouse = toLocalMouseY(mouseY);
+        return overlayHandler.onMouseDragged(gui, xMouse, yMouse, (int) deltaX, (int) deltaY) ? interruptFalse() : pass();
     }
-
 
     public EventResult onKeyPressed(Minecraft client, Screen screen, int keyCode, int scanCode, int modifiers) {
         if (overlayHandler == null || !isScreenValidForOverlay(screen))
@@ -159,10 +167,18 @@ public class GuiScreenEventHandler {
         return overlayHandler.onKeyReleased(gui, keyCode, modifiers) ? interruptFalse() : pass();
     }
 
-    public EventResult onCharTyped(Minecraft minecraft, Screen screen, char codePoint, int modifiers) {
+    public EventResult onCharTyped(Minecraft minecraft, Screen screen, char character, int modifiers) {
         if (overlayHandler == null || !isScreenValidForOverlay(screen))
             return pass();
-        return overlayHandler.onChar(gui, codePoint, modifiers) ? interruptFalse() : pass();
+        return overlayHandler.onChar(gui, character, modifiers) ? interruptFalse() : pass();
+    }
+
+    private int toLocalMouseX(double mouseX) {
+        return gui == null ? 0 : (int) (mouseX - gui.getGuiLeft());
+    }
+
+    private int toLocalMouseY(double mouseY) {
+        return gui == null ? 0 : (int) (mouseY - gui.getGuiTop());
     }
 
     private boolean didInventoryChange(Inventory inventory) {

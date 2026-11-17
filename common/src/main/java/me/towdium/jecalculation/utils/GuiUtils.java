@@ -13,10 +13,10 @@ public class GuiUtils {
     public static void drawContinuousTexturedBox(GuiGraphics guiGraphics, ResourceLocation res, int x, int y, int u, int v, int width, int height, int textureWidth, int textureHeight, int topBorder, int bottomBorder, int leftBorder, int rightBorder, float zLevel) {
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderTexture(0, res);
-        drawContinuousTexturedBox(guiGraphics, res, x, y, u, v, width, height, textureWidth, textureHeight, topBorder, bottomBorder, leftBorder, rightBorder, zLevel);
+        drawContinuousTexturedBoxInternal(guiGraphics, res, x, y, u, v, width, height, textureWidth, textureHeight, topBorder, bottomBorder, leftBorder, rightBorder, zLevel);
     }
 
-    public static void drawContinuousTexturedBox(GuiGraphics guiGraphics, ResourceLocation res, int x, int y, int u, int v, int width, int height, int textureWidth, int textureHeight, int topBorder, int bottomBorder, int leftBorder, int rightBorder, float zLevel) {
+    private static void drawContinuousTexturedBoxInternal(GuiGraphics guiGraphics, ResourceLocation res, int x, int y, int u, int v, int width, int height, int textureWidth, int textureHeight, int topBorder, int bottomBorder, int leftBorder, int rightBorder, float zLevel) {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
@@ -51,7 +51,7 @@ public class GuiUtils {
     }
 
     private static void drawTexturedModalRect(GuiGraphics guiGraphics, ResourceLocation res, int x, int y, int u, int v, int width, int height, int textureWidth, int textureHeight, float zLevel) {
-        guiGraphics.blit(res, x, y, zLevel, u, v, width, height, textureWidth, textureHeight);
+        guiGraphics.blit(res, x, y, (int) zLevel, (float) u, (float) v, width, height, textureWidth, textureHeight);
     }
 
 }

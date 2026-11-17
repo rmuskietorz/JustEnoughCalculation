@@ -123,7 +123,7 @@ public class JecaREIPlugin implements REIClientPlugin {
             return Result.createNotApplicable();
         }
 
-        protected EnumMap<Recipe.IO, List<Trio<ILabel, CostList, CostList>>> convertRecipe(TransferHandler.Context context) {
+        protected EnumMap<Recipe.IO, List<Trio<ILabel, CostList, CostList>>> convertRecipe(Context context) {
             EnumMap<Recipe.IO, List<Trio<ILabel, CostList, CostList>>> merged = new EnumMap<>(Recipe.IO.class);
             context.getDisplay().getInputEntries().forEach(ingredient -> merge(merged, ingredient.stream().map(EntryStack::getValue).toList(), context.getClass(), Recipe.IO.INPUT));
             context.getDisplay().getOutputEntries().forEach(ingredient -> merge(merged, ingredient.stream().map(EntryStack::getValue).toList(), context.getClass(), Recipe.IO.OUTPUT));

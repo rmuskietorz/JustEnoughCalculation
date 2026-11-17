@@ -2,6 +2,7 @@ package me.towdium.jecalculation.gui.widgets;
 
 import me.towdium.jecalculation.data.label.ILabel;
 import me.towdium.jecalculation.gui.JecaGui;
+import me.towdium.jecalculation.utils.Utilities;
 import me.towdium.jecalculation.utils.Utilities.Timer;
 import me.towdium.jecalculation.utils.wrappers.Wrapper;
 import net.fabricmc.api.EnvType;
@@ -23,15 +24,15 @@ import static me.towdium.jecalculation.gui.Resource.WGT_SLOT;
 @ParametersAreNonnullByDefault
 @MethodsReturnNonnullByDefault
 @Environment(EnvType.CLIENT)
-public class WLabel implements IWidget {  // TODO clean up tooltip and amount format
+public class WLabel implements IWidget {
     public int xPos, yPos, xSize, ySize;
     ILabel label = ILabel.EMPTY;
     public boolean accept;
     public ListenerValue<? super WLabel, ILabel> update;
     public ListenerAction<? super WLabel> click;
     public ListenerValue<? super WLabel, Integer> scroll;
-    Function<ILabel, String> fmtAmount = i -> "";
-    BiConsumer<ILabel, List<String>> fmtTooltip = (i, j) -> i.getToolTip(j, false);
+    Function<ILabel, String> fmtAmount = label -> label == ILabel.EMPTY ? "" : label.getAmountString(false);
+    BiConsumer<ILabel, List<String>> fmtTooltip = (label, tooltip) -> label.getToolTip(tooltip, true);
     protected Timer timer = new Timer();
 
     public WLabel(int xPos, int yPos, int xSize, int ySize, boolean accept) {
@@ -77,6 +78,10 @@ public class WLabel implements IWidget {  // TODO clean up tooltip and amount fo
         if (!mouseIn(xMouse, yMouse)) return false;
         if (label != ILabel.EMPTY) {
             tooltip.add(label.getDisplayName());
+            String amountText = fmtAmount.apply(label);
+            if (!amountText.isEmpty()) {
+                tooltip.add(ILabel.FORMAT_GREY + Utilities.I18n.get("label.common.amount", amountText));
+            }
             tooltip.add(JecaGui.SEPARATOR);
             fmtTooltip.accept(label, tooltip);
         }

@@ -11,6 +11,8 @@ architectury {
     loader("quilt")
 }
 
+def includeReiRuntime = rootProject.findProperty("include_rei_runtime")?.toString()?.toBoolean() ?: false
+
 loom {
     accessWidenerPath = project(":common").loom.accessWidenerPath
 }
@@ -34,9 +36,15 @@ dependencies {
     }
 
     modRuntimeOnly("mezz.jei:jei-${rootProject.minecraft_version}-fabric:${rootProject.jei_version}") { transitive false }
-    modRuntimeOnly("me.shedaniel:RoughlyEnoughItems-fabric:${rootProject.rei_version}") {
+    modCompileOnly("me.shedaniel:RoughlyEnoughItems-fabric:${rootProject.rei_version}") {
         exclude group: "net.fabricmc"
         exclude group: "net.fabricmc.fabric-api"
+    }
+    if (includeReiRuntime) {
+        modRuntimeOnly("me.shedaniel:RoughlyEnoughItems-fabric:${rootProject.rei_version}") {
+            exclude group: "net.fabricmc"
+            exclude group: "net.fabricmc.fabric-api"
+        }
     }
 
     common(project(path: ":common", configuration: "namedElements")) { transitive false }

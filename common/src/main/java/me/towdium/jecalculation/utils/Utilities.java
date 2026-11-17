@@ -2,7 +2,7 @@ package me.towdium.jecalculation.utils;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.architectury.fluid.FluidStack;
-import dev.architectury.hooks.client.fluid.ClientFluidStackHooks;
+import dev.architectury.hooks.fluid.FluidStackHooks;
 import dev.architectury.injectables.annotations.ExpectPlatform;
 import dev.architectury.platform.Mod;
 import dev.architectury.platform.Platform;
@@ -18,16 +18,21 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -36,6 +41,7 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.material.Fluid;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.text.WordUtils;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nullable;
@@ -63,6 +69,10 @@ import java.util.stream.StreamSupport;
 @MethodsReturnNonnullByDefault
 @ParametersAreNonnullByDefault
 public class Utilities {
+    private static final Logger LOGGER = LogManager.getLogger();
+    private static final HolderLookup.Provider BUILTIN_REGISTRY_LOOKUP =
+            RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY);
+    private static final RegistryOps<Tag> COMPONENT_CODEC_OPS = RegistryOps.create(NbtOps.INSTANCE, BUILTIN_REGISTRY_LOOKUP);
     // FLOAT FORMATTING
     public static char[] suffix = new char[]{'K', 'M', 'B', 'G', 'T', 'P'};
     public static DecimalFormat[] format = new DecimalFormat[]{
@@ -131,20 +141,8 @@ public class Utilities {
         throw new AssertionError();
     }
 
-    @ExpectPlatform
-    public static boolean areCapsCompatible(ItemStack itemStack, ItemStack itemStack1) {
-        throw new AssertionError();
-    }
-
-    @Nullable
-    @ExpectPlatform
-    public static CompoundTag getCap(ItemStack itemStack) {
-        throw new AssertionError();
-    }
-
-    @ExpectPlatform
-    public static ItemStack createItemStackWithCap(Item item, int count, CompoundTag cap) {
-        throw new AssertionError();
+    public static boolean areCapsCompatible(ItemStack first, ItemStack second) {
+        return ItemStack.isSameItemSameComponents(first, second);
     }
 
     @Nullable
@@ -159,6 +157,51 @@ public class Utilities {
         } else {
             stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
         }
+    }
+
+    @Nullable
+    public static CompoundTag copyItemComponents(ItemStack stack) {
+        return serializeComponentPatch(stack.getComponentsPatch());
+    }
+
+    public static void applyItemComponents(ItemStack stack, @Nullable CompoundTag serializedPatch) {
+        DataComponentPatch patch = deserializeComponentPatch(serializedPatch);
+        if (!patch.isEmpty()) {
+            stack.applyComponents(patch);
+        }
+    }
+
+    @Nullable
+    public static CompoundTag copyFluidComponents(FluidStack stack) {
+        return serializeComponentPatch(stack.getPatch());
+    }
+
+    public static void applyFluidComponents(FluidStack stack, @Nullable CompoundTag serializedPatch) {
+        DataComponentPatch patch = deserializeComponentPatch(serializedPatch);
+        if (!patch.isEmpty()) {
+            stack.applyComponents(patch);
+        }
+    }
+
+    public static DataComponentPatch deserializeComponentPatch(@Nullable CompoundTag serialized) {
+        if (serialized == null || serialized.isEmpty()) {
+            return DataComponentPatch.EMPTY;
+        }
+        return DataComponentPatch.CODEC.parse(COMPONENT_CODEC_OPS, serialized)
+                .resultOrPartial(LOGGER::error)
+                .orElse(DataComponentPatch.EMPTY);
+    }
+
+    @Nullable
+    public static CompoundTag serializeComponentPatch(DataComponentPatch patch) {
+        if (patch == null || patch.isEmpty()) {
+            return null;
+        }
+        return DataComponentPatch.CODEC.encodeStart(COMPONENT_CODEC_OPS, patch)
+                .resultOrPartial(LOGGER::error)
+                .filter(tag -> tag instanceof CompoundTag)
+                .map(tag -> ((CompoundTag) tag).copy())
+                .orElse(null);
     }
 
     public static TagKey<Item> IRON_INGOTS = tag(Registries.ITEM, Platform.isForgeLike() ? "ingots/iron" : "iron_ingots");
@@ -198,7 +241,7 @@ public class Utilities {
         FluidStack fs = FluidStack.create(fluid, 1000);
         String name = fs.getName().getString(); //.getFormattedText();
         if (name.equals("lava") || name.equals("water")) return "Minecraft";
-        TextureAtlasSprite texture = ClientFluidStackHooks.getStillTexture(fluid);
+        TextureAtlasSprite texture = FluidStackHooks.getStillTexture(fluid);
         if (texture == null) return "Unknown";
         else return getModName(texture.atlasLocation().getNamespace());
     }

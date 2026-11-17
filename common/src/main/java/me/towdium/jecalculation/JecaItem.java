@@ -34,7 +34,7 @@ public class JecaItem extends Item {
     String key;
 
     private JecaItem(String name) {
-        super(new Item.Properties().stacksTo(1).arch$tab(CreativeModeTabs.TOOLS_AND_UTILITIES));
+        super(new Properties().stacksTo(1).arch$tab(CreativeModeTabs.TOOLS_AND_UTILITIES));
         key = "jecalculation.item.calculator_" + name;
     }
 

@@ -54,4 +54,17 @@ allprojects {
         }
         withSourcesJar()
     }
+
+    configurations.configureEach {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == "dev.architectury") {
+                def name = details.requested.name
+                if (name.startsWith("architectury")
+                        && !name.contains("transformer")
+                        && !name.contains("injectables")) {
+                    details.useVersion(rootProject.architectury_version)
+                }
+            }
+        }
+    }
 }

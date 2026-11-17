@@ -7,8 +7,6 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.common.util.INBTSerializable;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
@@ -17,7 +15,6 @@ import net.neoforged.neoforge.registries.RegisterEvent;
 /**
  * NeoForge-specific storage for player records backed by attachments.
  */
-@Mod.EventBusSubscriber(modid = JustEnoughCalculation.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class JecaCapability {
     private static final ResourceLocation RECORD_ID = ResourceLocation.fromNamespaceAndPath(JustEnoughCalculation.MODID, "player_record");
 
@@ -28,7 +25,6 @@ public final class JecaCapability {
     private JecaCapability() {
     }
 
-    @SubscribeEvent
     public static void registerAttachments(RegisterEvent event) {
         event.register(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, helper -> helper.register(RECORD_ID, PLAYER_RECORD));
     }
